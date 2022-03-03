@@ -1,0 +1,5 @@
+# Dont include animations and pictures.
+*.mp4
+*.gif
+*.png
+*.jpeg

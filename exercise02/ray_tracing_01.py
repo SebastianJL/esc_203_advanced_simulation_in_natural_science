@@ -12,7 +12,11 @@ class SceneObject(ABC):
 
     @abstractmethod
     def smallest_positive_intersect(self, ray_dir: np.ndarray, ray_origin: np.ndarray) -> Optional[float]:
-        """Return t where closest_intersection = t*ray_dir + ray_origin or None if no intersection."""
+        """Return t where closest_intersection = t*ray_dir + ray_origin or None if no intersection.
+
+        This function is supposed to only return if both roots are positive, since otherwise this would mean that
+        the ray origin is inside the object.
+        """
         ...
 
 
@@ -23,18 +27,17 @@ class Sphere(SceneObject):
 
     def smallest_positive_intersect(self, ray_dir, ray_origin) -> object:
         assert (np.isclose(np.linalg.norm(ray_dir), 1))
-        sphere_vector = ray_origin - self.center
-        b = 2*sphere_vector.dot(ray_origin)
-        c = sphere_vector.dot(sphere_vector) - self.radius**2
+        dist_vec = ray_origin - self.center
+        b = 2*dist_vec.dot(ray_dir)
+        c = dist_vec.dot(dist_vec) - self.radius**2
         discriminant = b**2 - 4*c
         if discriminant >= 0:
             q = -0.5*(b + np.sign(b)*np.sqrt(discriminant))
             t1 = q
             t2 = c/q
+
             if t1 > 0 and t2 > 0:
                 return min(t1, t2)
-            t = min(abs(q), abs(c/q))
-            return t
         return None
 
 

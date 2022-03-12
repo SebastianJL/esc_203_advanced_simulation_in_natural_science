@@ -67,11 +67,11 @@ if __name__ == '__main__':
     height = 400
     ratio = width/height
     camera_pos = np.array([0, 0, -1])
-    light_pos = np.array([4, 4, -4])
+    light_pos = np.array([4, 4, -3])
     scene_objects = [
         Sphere(color=np.array([1, 0, 0]), center=np.array([0.0, 0.0, 10.0]), radius=5),
-        Sphere(color=np.array([0, 1, 0]), center=np.array([0.5, 0.4, 4]), radius=.4),
-        # Sphere(color=np.array([0, 0, 1]), center=np.array([0.0, 0.0, 0.5]), radius=.1),
+        Sphere(color=np.array([0, 1, 0]), center=np.array([0.5, 0.4, 3.5]), radius=.4),
+        Sphere(color=np.array([0, 1, 0.7]), center=np.array([-0.5, 0.4, 4.5]), radius=.4),
     ]
 
     pixels = np.zeros((width, height, 3))

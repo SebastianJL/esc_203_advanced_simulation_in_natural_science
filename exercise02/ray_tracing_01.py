@@ -63,43 +63,51 @@ def find_closest_intersecting_object(objects: list[SceneObject], ray_dir: np.nda
 
 if __name__ == '__main__':
 
-    width = 300
-    height = 200
+    width = 600
+    height = 400
     ratio = width/height
-    camera = np.array([0, 0, -1])
-    pixels = np.zeros((height, width, 3))
+    camera_pos = np.array([0, 0, -1])
+    light_pos = np.array([4, 4, -4])
+    scene_objects = [
+        Sphere(color=np.array([1, 0, 0]), center=np.array([0.0, 0.0, 10.0]), radius=5),
+        Sphere(color=np.array([0, 1, 0]), center=np.array([0.5, 0.4, 4]), radius=.4),
+        # Sphere(color=np.array([0, 0, 1]), center=np.array([0.0, 0.0, 0.5]), radius=.1),
+    ]
 
+    pixels = np.zeros((width, height, 3))
+
+    # Cartesian coordinates for screen in the 3d scene.
     x_coords = np.linspace(-1, 1, width)
     y_coords = np.linspace(-1/ratio, 1/ratio, height)
 
-    objects = [
-        Sphere(color=np.array([0.2, 0.3, 0.9]), center=np.array([0., -1., 5.]), radius=2.)
-    ]
-
-    light = np.array([1, 4, 4])
-
     for i, x in enumerate(x_coords):
         for j, y in enumerate(y_coords):
-            pixel = np.array([x, y, 0])
-            primary_direction = normalize(pixel - camera)
-            primary_origin = camera
+            pixel_pos = np.array([x, y, 0])
+            primary_direction = normalize(pixel_pos - camera_pos)
+            primary_origin = camera_pos
 
-            nearest_object, t_min = find_closest_intersecting_object(objects, primary_direction, primary_origin)
+            nearest_object, t_min = find_closest_intersecting_object(scene_objects, primary_direction, primary_origin)
             if nearest_object is None:
                 continue
 
-            intersection = t_min*primary_direction + camera
-            shadow_direction = normalize(light - intersection)
-            shadow_origin = intersection
+            intersection = t_min*primary_direction + camera_pos
+            # Todo: Return surface normal from find_closest_intersecting_object() instead of calculating it here.
+            surface_normal = normalize(intersection - nearest_object.center)
+            shadow_origin = intersection + 1e-5*surface_normal  # This places the origin slightly outside the object.
+            shadow_direction = normalize(light_pos - shadow_origin)
 
-            shadowing_object, t_min = find_closest_intersecting_object(objects, shadow_direction, shadow_origin)
-            is_shadowed = t_min < np.linalg.norm(light - intersection)
+            shadowing_object, t_min = find_closest_intersecting_object(scene_objects, shadow_direction, shadow_origin)
+            is_shadowed = t_min < np.linalg.norm(light_pos - intersection)
 
             if is_shadowed:
                 continue
 
-            pixels[j, i] = nearest_object.color
+            pixels[i, j] = nearest_object.color
 
+    # Transform to screen coordinates.
+    pixels = pixels.swapaxes(0, 1)
     pixels = pixels[::-1, :]
+
+    # Show
     plt.imshow(pixels)
     plt.show()

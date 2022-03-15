@@ -1,4 +1,5 @@
 use std::cmp;
+use std::time::Instant;
 
 use image::ImageBuffer;
 use itertools_num::linspace;
@@ -79,7 +80,7 @@ fn find_closest_intersecting_object<'a>(objects: &'a [Sphere], ray: &Ray) -> (Op
     (closest_object, t_min)
 }
 
-fn main() {
+fn render() {
     let width = 2400;
     let height = 1600;
     let ratio = width as Real / height as Real;
@@ -132,4 +133,11 @@ fn main() {
     }
 
     pixels.save("rt_image.png").unwrap();
+}
+
+fn main() {
+    let start = Instant::now();
+    render();
+    let duration = start.elapsed();
+    println!("{:?}", duration);
 }

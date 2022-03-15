@@ -42,7 +42,7 @@ impl Sphere {
 
 impl SceneObject for Sphere {
     fn smallest_positive_intersect(&self, ray: &Ray) -> Option<Real> {
-        let dist_vec = &ray.origin - &self.center;
+        let dist_vec = ray.origin - self.center;
         let b = 2. * dist_vec.dot(&ray.direction);
         let c = dist_vec.dot(&dist_vec) - self.radius.powi(2);
         let discriminant = b.powi(2) - 4. * c;
@@ -108,11 +108,11 @@ fn render() {
 
             let intersection = primary.direction * t_min + camera_pos;
             // Todo: Return surface normal from find_closest_intersecting_object().
-            let surface_normal = (intersection - &nearest_object.center).normalize();
-            let shadow_origin = &intersection + 1e-5 * &surface_normal;
+            let surface_normal = (intersection - nearest_object.center).normalize();
+            let shadow_origin = intersection + 1e-5 * surface_normal;
             let shadow = Ray::new(
                 shadow_origin,
-                (&light_pos - &shadow_origin).normalize(),
+                (light_pos - shadow_origin).normalize(),
             );
 
             let (_shadowing_object, t_min) = find_closest_intersecting_object(

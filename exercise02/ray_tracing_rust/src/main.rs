@@ -1,9 +1,8 @@
-use std::cmp;
 use std::time::Instant;
 
 use image::ImageBuffer;
 use itertools_num::linspace;
-use nalgebra::{DMatrix, point, Point3, UnitVector3, vector, Vector3};
+use nalgebra::{vector, Vector3};
 
 use f64 as Real;
 
@@ -91,13 +90,10 @@ fn render() {
         Sphere::new([255, 0, 0], vector![0.0, 0.0, 10.0], 5.),
         Sphere::new([0, 255, 0], vector![0.5, 0.4, 3.5], 0.4),
         Sphere::new([0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4),
-        // Sphere(color = np.array([0, 1, 0]), center = np.array([0.5, 0.4, 3.5]), radius =.4),
-        // Sphere(color = np.array([0, 1, 0.7]), center = np.array([-0.5, 0.4, 4.5]), radius =.4),
     ];
 
     let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::new(width, height);
 
-    'outer:
     for (i, x) in linspace::<Real>(-1., 1., width as usize).enumerate() {
         for (j, y) in linspace::<Real>(-1. / ratio, 1. / ratio, height as usize).enumerate() {
             let pixel_pos = vector![x, y, 0.];
@@ -119,7 +115,7 @@ fn render() {
                 (&light_pos - &shadow_origin).normalize(),
             );
 
-            let (shadowing_object, t_min) = find_closest_intersecting_object(
+            let (_shadowing_object, t_min) = find_closest_intersecting_object(
                 &scene_objects,
                 &shadow,
             );

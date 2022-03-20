@@ -25,17 +25,18 @@ trait SceneObject {
     /// otherwise this would mean that the ray origin is inside the object.
     fn smallest_positive_intersect(&self, ray: &Ray) -> Option<Real>;
 
-    fn color(&self) -> [u8; 3];
+    fn color(&self) -> Vector3<u8>;
+    fn normal(&self, coord: Vector3<Real>) -> Vector3<Real>;
 }
 
 struct Sphere {
-    color: [u8; 3],
+    color: Vector3<u8>,
     center: Vector3<Real>,
     radius: Real,
 }
 
 impl Sphere {
-    fn new(color: [u8; 3], center: Vector3<Real>, radius: Real) -> Self {
+    fn new(color: Vector3<u8>, center: Vector3<Real>, radius: Real) -> Self {
         Sphere { color, center, radius }
     }
 }
@@ -58,8 +59,12 @@ impl SceneObject for Sphere {
         None
     }
 
-    fn color(&self) -> [u8; 3] {
+    fn color(&self) -> Vector3<u8> {
         self.color
+    }
+
+    fn normal(&self, intersection: Vector3<Real>) -> Vector3<Real> {
+        (intersection - self.center).normalize()
     }
 }
 
@@ -87,9 +92,10 @@ fn render() {
     let camera_pos = vector![0_f64, 0., -1.];
     let light_pos = vector![4., 4., -3.];
     let scene_objects = vec![
-        Sphere::new([255, 0, 0], vector![0.0, 0.0, 10.0], 5.),
-        Sphere::new([0, 255, 0], vector![0.5, 0.4, 3.5], 0.4),
-        Sphere::new([0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4),
+        Sphere::new(vector![255, 0, 0], vector![0.0, 0.0, 10.0], 5.),
+        Sphere::new(vector![0, 255, 0], vector![0.5, 0.4, 3.5], 0.4),
+        Sphere::new(vector![0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4),
+        Sphere::new(vector![0, 255, 255], vector![0.7, 0.7, 2.5], 0.1),
     ];
 
     let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::new(width, height);
@@ -107,8 +113,7 @@ fn render() {
             let nearest_object = nearest_object.unwrap();
 
             let intersection = primary.direction * t_min + camera_pos;
-            // Todo: Return surface normal from find_closest_intersecting_object().
-            let surface_normal = (intersection - nearest_object.center).normalize();
+            let surface_normal = nearest_object.normal(intersection);
             let shadow_origin = intersection + 1e-5 * surface_normal;
             let shadow = Ray::new(
                 shadow_origin,
@@ -124,7 +129,10 @@ fn render() {
                 continue;
             }
 
-            pixels.put_pixel(i as u32, height - 1 - j as u32, image::Rgb(nearest_object.color));
+            pixels.put_pixel(
+                i as u32, height - 1 - j as u32,
+                image::Rgb(nearest_object.color().into()
+                ));
         }
     }
 

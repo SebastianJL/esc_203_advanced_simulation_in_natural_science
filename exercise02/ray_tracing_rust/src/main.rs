@@ -68,7 +68,9 @@ impl SceneObject for Sphere {
     }
 }
 
-fn find_closest_intersecting_object<'a>(objects: &'a [Sphere], ray: &Ray) -> (Option<&'a Sphere>, Real) {
+fn find_closest_intersecting_object<'a>(
+    objects: &'a Vec<Box<dyn SceneObject>>, ray: &Ray)
+    -> (Option<&'a Box<dyn SceneObject>>, Real) {
     let mut t_min = Real::INFINITY;
     let mut closest_object = None;
 
@@ -91,11 +93,11 @@ fn render() {
 
     let camera_pos = vector![0_f64, 0., -1.];
     let light_pos = vector![4., 4., -3.];
-    let scene_objects = vec![
-        Sphere::new(vector![255, 0, 0], vector![0.0, 0.0, 10.0], 5.),
-        Sphere::new(vector![0, 255, 0], vector![0.5, 0.4, 3.5], 0.4),
-        Sphere::new(vector![0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4),
-        Sphere::new(vector![0, 255, 255], vector![0.7, 0.7, 2.5], 0.1),
+    let scene_objects: Vec<Box<dyn SceneObject>> = vec![
+        Box::new(Sphere::new(vector![255, 0, 0], vector![0.0, 0.0, 10.0], 5.)),
+        Box::new(Sphere::new(vector![0, 255, 0], vector![0.5, 0.4, 3.5], 0.4)),
+        Box::new(Sphere::new(vector![0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4)),
+        Box::new(Sphere::new(vector![0, 255, 255], vector![0.7, 0.7, 2.5], 0.1)),
     ];
 
     let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::new(width, height);

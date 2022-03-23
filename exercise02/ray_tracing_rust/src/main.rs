@@ -18,6 +18,18 @@ impl Ray {
     }
 }
 
+#[derive(Debug, Clone)]
+struct SurfaceParameters {
+    // Specular
+    s: Real,
+    // Diffuse
+    d: Real,
+    // Ambient
+    a: Real,
+    // Shininess
+    alpha: Real,
+}
+
 trait SceneObject {
     /// Return t where closest_intersection = t*ray_dir + ray_origin or None if no intersection.
     ///
@@ -27,17 +39,29 @@ trait SceneObject {
 
     fn color(&self) -> Vector3<Real>;
     fn normal(&self, coord: Vector3<Real>) -> Vector3<Real>;
+    fn surface_parameters(&self) -> SurfaceParameters;
 }
 
 struct Sphere {
     color: Vector3<Real>,
+    surface_parameters: SurfaceParameters,
     center: Vector3<Real>,
     radius: Real,
 }
 
 impl Sphere {
     fn new(color: Vector3<Real>, center: Vector3<Real>, radius: Real) -> Self {
-        Sphere { color, center, radius }
+        Sphere {
+            color,
+            surface_parameters: SurfaceParameters {
+                s: 1.,
+                d: 1.,
+                a: 0.,
+                alpha: 0.,
+            },
+            center,
+            radius,
+        }
     }
 }
 
@@ -65,6 +89,10 @@ impl SceneObject for Sphere {
 
     fn normal(&self, intersection: Vector3<Real>) -> Vector3<Real> {
         (intersection - self.center).normalize()
+    }
+
+    fn surface_parameters(&self) -> SurfaceParameters {
+        self.surface_parameters.clone()
     }
 }
 
@@ -146,7 +174,13 @@ fn render() {
                 continue;
             }
 
-            let rgb_value: [u8; 3]= (nearest_object.color() * 255.)
+            let color: Vector3<Real> = phong_shading(
+                &light_rays,
+                &surface_normal,
+                -primary.direction,
+                nearest_object);
+
+            let rgb_value: [u8; 3] = (color * 255.)
                 .iter()
                 .cloned()
                 .map(|x| x as u8) // Saturating cast.
@@ -161,6 +195,10 @@ fn render() {
     }
 
     pixels.save("rt_image.png").unwrap();
+}
+
+fn phong_shading(light_rays: &Vec<Ray>, normal: &Vector3<Real>, view_ray: Vector3<Real>, scene_object: &Box<dyn SceneObject>) -> Vector3<Real> {
+    scene_object.color()
 }
 
 fn main() {

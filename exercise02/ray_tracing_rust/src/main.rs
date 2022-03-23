@@ -169,3 +169,25 @@ fn main() {
     let duration = start.elapsed();
     println!("{:?}", duration);
 }
+
+
+#[cfg(test)]
+mod tests {
+    use image::io::Reader as ImageReader;
+
+    #[test]
+    fn compare_image() {
+        crate::render();
+        let img1 = ImageReader::open("rt_image.png").unwrap().decode().unwrap().into_rgb8();
+        let img2 = ImageReader::open("rt_image_reference.png").unwrap().decode().unwrap().into_rgb8();
+        let width = img1.width();
+        let height = img1.height();
+        assert_eq!(width, img2.width());
+        assert_eq!(height, img2.height());
+
+        for (x, y, p1) in img1.enumerate_pixels() {
+            let p2 = img2.get_pixel(x, y);
+            assert_eq!(p1, p2);
+        }
+    }
+}

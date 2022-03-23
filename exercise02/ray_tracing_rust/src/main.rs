@@ -68,6 +68,11 @@ impl SceneObject for Sphere {
     }
 }
 
+struct Light {
+    position: Vector3<Real>,
+    color: Vector3<u8>,
+}
+
 fn find_closest_intersecting_object<'a>(
     objects: &'a Vec<Box<dyn SceneObject>>, ray: &Ray)
     -> (Option<&'a Box<dyn SceneObject>>, Real) {
@@ -87,12 +92,14 @@ fn find_closest_intersecting_object<'a>(
 }
 
 fn render() {
-    let width = 2400;
-    let height = 1600;
+    let width = 600;
+    let height = 400;
     let ratio = width as Real / height as Real;
 
     let camera_pos = vector![0_f64, 0., -1.];
-    let light_pos = vector![4., 4., -3.];
+    let lights = vec![
+        Light { position: vector![4., 4., -3.], color: vector![255, 255, 255] }
+    ];
     let scene_objects: Vec<Box<dyn SceneObject>> = vec![
         Box::new(Sphere::new(vector![255, 0, 0], vector![0.0, 0.0, 10.0], 5.)),
         Box::new(Sphere::new(vector![0, 255, 0], vector![0.5, 0.4, 3.5], 0.4)),
@@ -116,25 +123,34 @@ fn render() {
 
             let intersection = primary.direction * t_min + camera_pos;
             let surface_normal = nearest_object.normal(intersection);
-            let shadow_origin = intersection + 1e-5 * surface_normal;
-            let shadow = Ray::new(
-                shadow_origin,
-                (light_pos - shadow_origin).normalize(),
-            );
 
-            let (_shadowing_object, t_min) = find_closest_intersecting_object(
-                &scene_objects,
-                &shadow,
-            );
-            let is_shadowed = t_min < (light_pos - intersection).norm();
-            if is_shadowed {
+            let mut light_rays: Vec<Ray> = vec![];
+            for light in lights.iter() {
+                let shadow_origin = intersection + 1e-5 * surface_normal;
+                let shadow = Ray::new(
+                    shadow_origin,
+                    (light.position - shadow_origin).normalize(),
+                );
+
+                let (_shadowing_object, t_min) = find_closest_intersecting_object(
+                    &scene_objects,
+                    &shadow,
+                );
+                let is_shadowed = t_min < (light.position - intersection).norm();
+                if !is_shadowed {
+                    light_rays.push(shadow);
+                }
+            }
+
+            if light_rays.is_empty() {
                 continue;
             }
 
             pixels.put_pixel(
-                i as u32, height - 1 - j as u32,
-                image::Rgb(nearest_object.color().into()
-                ));
+                i as u32,
+                height - 1 - j as u32,
+                image::Rgb(nearest_object.color().into()),
+            );
         }
     }
 

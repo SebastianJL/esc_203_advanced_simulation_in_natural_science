@@ -25,18 +25,18 @@ trait SceneObject {
     /// otherwise this would mean that the ray origin is inside the object.
     fn smallest_positive_intersect(&self, ray: &Ray) -> Option<Real>;
 
-    fn color(&self) -> Vector3<u8>;
+    fn color(&self) -> Vector3<Real>;
     fn normal(&self, coord: Vector3<Real>) -> Vector3<Real>;
 }
 
 struct Sphere {
-    color: Vector3<u8>,
+    color: Vector3<Real>,
     center: Vector3<Real>,
     radius: Real,
 }
 
 impl Sphere {
-    fn new(color: Vector3<u8>, center: Vector3<Real>, radius: Real) -> Self {
+    fn new(color: Vector3<Real>, center: Vector3<Real>, radius: Real) -> Self {
         Sphere { color, center, radius }
     }
 }
@@ -59,7 +59,7 @@ impl SceneObject for Sphere {
         None
     }
 
-    fn color(&self) -> Vector3<u8> {
+    fn color(&self) -> Vector3<Real> {
         self.color
     }
 
@@ -70,7 +70,7 @@ impl SceneObject for Sphere {
 
 struct Light {
     position: Vector3<Real>,
-    color: Vector3<u8>,
+    color: Vector3<Real>,
 }
 
 fn find_closest_intersecting_object<'a>(
@@ -98,13 +98,13 @@ fn render() {
 
     let camera_pos = vector![0_f64, 0., -1.];
     let lights = vec![
-        Light { position: vector![4., 4., -3.], color: vector![255, 255, 255] }
+        Light { position: vector![4., 4., -3.], color: vector![1., 1., 1.] }
     ];
     let scene_objects: Vec<Box<dyn SceneObject>> = vec![
-        Box::new(Sphere::new(vector![255, 0, 0], vector![0.0, 0.0, 10.0], 5.)),
-        Box::new(Sphere::new(vector![0, 255, 0], vector![0.5, 0.4, 3.5], 0.4)),
-        Box::new(Sphere::new(vector![0, 255, 170], vector![-0.5, 0.4, 4.5], 0.4)),
-        Box::new(Sphere::new(vector![0, 255, 255], vector![0.7, 0.7, 2.5], 0.1)),
+        Box::new(Sphere::new(vector![1., 0., 0.], vector![0.0, 0.0, 10.0], 5.)),
+        Box::new(Sphere::new(vector![0., 1., 0.], vector![0.5, 0.4, 3.5], 0.4)),
+        Box::new(Sphere::new(vector![0., 1., 0.7], vector![-0.5, 0.4, 4.5], 0.4)),
+        Box::new(Sphere::new(vector![0., 1., 1.], vector![0.7, 0.7, 2.5], 0.1)),
     ];
 
     let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::new(width, height);
@@ -146,10 +146,16 @@ fn render() {
                 continue;
             }
 
+            let rgb_value: [u8; 3]= (nearest_object.color() * 255.)
+                .iter()
+                .cloned()
+                .map(|x| x as u8) // Saturating cast.
+                .collect::<Vec<u8>>()
+                .try_into().unwrap();
             pixels.put_pixel(
                 i as u32,
                 height - 1 - j as u32,
-                image::Rgb(nearest_object.color().into()),
+                image::Rgb(rgb_value),
             );
         }
     }

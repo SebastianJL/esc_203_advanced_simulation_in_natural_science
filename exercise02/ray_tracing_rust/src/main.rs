@@ -26,8 +26,10 @@ struct SurfaceParameters {
     d: Real,
     // Specular
     s: Real,
-    // Shininess
-    alpha: Real,
+    // Specular phong exponent
+    sp: Real,
+    // Specular metalness
+    sm: Real,
 }
 
 trait SceneObject {
@@ -54,10 +56,11 @@ impl Sphere {
         Sphere {
             color,
             surface_parameters: SurfaceParameters {
-                a: 0.,
+                a: 1.,
                 d: 1.,
                 s: 1.,
-                alpha: 0.,
+                sp: 100.,
+                sm: 0.,
             },
             center,
             radius,
@@ -120,10 +123,9 @@ fn find_closest_intersecting_object<'a>(
 }
 
 fn render() {
-    // let width = 600;
-    // let height = 400;
-    let width = 2400;
-    let height = 1600;
+    let multiplier = 4;
+    let width = multiplier*600;
+    let height = multiplier*400;
     let ratio = width as Real / height as Real;
 
     let camera_pos = vector![0_f64, 0., -1.];
@@ -207,14 +209,20 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     // Source for mathematical model are the lecture notes for phong shading.
     let V = view_direction;
     let N = normal;
-    let SurfaceParameters { a: k_a, d: k_d, s: k_s, alpha } = object.surface_parameters();
+    let SurfaceParameters { a: k_a, d: k_d, s: k_s, sp: k_sp, sm: k_sm } = object
+        .surface_parameters();
     let mut sum: Vector3<Real> = Vector3::zeros();
     for (light_ray, light) in light_rays.into_iter().zip(lights) {
         let L = light_ray.direction;
         let R = 2. * L.dot(&N) * N - L;
+
+        let ambient_light = vector![0.2,0.2,0.2];
+        let ambient_color = k_a * object.color().component_mul(&ambient_light);
         let diffuse_color = k_d * light.color.component_mul(&object.color()) * Real::max(L.dot(&N), 0.);
-        let specular_highligh_color =
-        sum += diffuse_color;
+        let specular_highlight_color: Vector3<Real> = k_sm * object.color() + (1. - k_sm) * vector![1., 1.,1.];
+        let specular_color = k_s * specular_highlight_color.component_mul(&light.color) *
+            Real::max(R.dot(&V), 0.).powf(k_sp);
+        sum += ambient_color + diffuse_color + specular_color;
     }
     sum
 }

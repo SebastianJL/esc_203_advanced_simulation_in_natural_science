@@ -20,12 +20,12 @@ impl Ray {
 
 #[derive(Debug, Clone)]
 struct SurfaceParameters {
-    // Specular
-    s: Real,
-    // Diffuse
-    d: Real,
     // Ambient
     a: Real,
+    // Diffuse
+    d: Real,
+    // Specular
+    s: Real,
     // Shininess
     alpha: Real,
 }
@@ -54,9 +54,9 @@ impl Sphere {
         Sphere {
             color,
             surface_parameters: SurfaceParameters {
-                s: 1.,
-                d: 1.,
                 a: 0.,
+                d: 1.,
+                s: 1.,
                 alpha: 0.,
             },
             center,
@@ -120,8 +120,10 @@ fn find_closest_intersecting_object<'a>(
 }
 
 fn render() {
-    let width = 600;
-    let height = 400;
+    // let width = 600;
+    // let height = 400;
+    let width = 2400;
+    let height = 1600;
     let ratio = width as Real / height as Real;
 
     let camera_pos = vector![0_f64, 0., -1.];
@@ -141,32 +143,34 @@ fn render() {
         for (j, y) in linspace::<Real>(-1. / ratio, 1. / ratio, height as usize).enumerate() {
             let pixel_pos = vector![x, y, 0.];
             let direction = (pixel_pos - camera_pos).normalize();
-            let primary = Ray::new(camera_pos, direction);
+            let primary_ray = Ray::new(camera_pos, direction);
 
-            let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &primary);
+            let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &primary_ray);
             if nearest_object.is_none() {
                 continue;
             }
             let nearest_object = nearest_object.unwrap();
 
-            let intersection = primary.direction * t_min + camera_pos;
+            let intersection = primary_ray.direction * t_min + camera_pos;
             let surface_normal = nearest_object.normal(intersection);
 
             let mut light_rays: Vec<Ray> = vec![];
+            let mut active_lights: Vec<&Light> = vec![];
             for light in lights.iter() {
-                let shadow_origin = intersection + 1e-5 * surface_normal;
-                let shadow = Ray::new(
-                    shadow_origin,
-                    (light.position - shadow_origin).normalize(),
+                let light_ray_origin = intersection + 1e-5 * surface_normal;
+                let light_ray = Ray::new(
+                    light_ray_origin,
+                    (light.position - light_ray_origin).normalize(),
                 );
 
                 let (_shadowing_object, t_min) = find_closest_intersecting_object(
                     &scene_objects,
-                    &shadow,
+                    &light_ray,
                 );
                 let is_shadowed = t_min < (light.position - intersection).norm();
                 if !is_shadowed {
-                    light_rays.push(shadow);
+                    light_rays.push(light_ray);
+                    active_lights.push(light);
                 }
             }
 
@@ -176,8 +180,9 @@ fn render() {
 
             let color: Vector3<Real> = phong_shading(
                 &light_rays,
-                &surface_normal,
-                -primary.direction,
+                active_lights,
+                surface_normal,
+                -primary_ray.direction,
                 nearest_object);
 
             let rgb_value: [u8; 3] = (color * 255.)
@@ -197,8 +202,21 @@ fn render() {
     pixels.save("rt_image.png").unwrap();
 }
 
-fn phong_shading(light_rays: &Vec<Ray>, normal: &Vector3<Real>, view_ray: Vector3<Real>, scene_object: &Box<dyn SceneObject>) -> Vector3<Real> {
-    scene_object.color()
+fn phong_shading(light_rays: &Vec<Ray>, lights: Vec<&Light>, normal: Vector3<Real>, view_direction:
+Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
+    // Source for mathematical model are the lecture notes for phong shading.
+    let V = view_direction;
+    let N = normal;
+    let SurfaceParameters { a: k_a, d: k_d, s: k_s, alpha } = object.surface_parameters();
+    let mut sum: Vector3<Real> = Vector3::zeros();
+    for (light_ray, light) in light_rays.into_iter().zip(lights) {
+        let L = light_ray.direction;
+        let R = 2. * L.dot(&N) * N - L;
+        let diffuse_color = k_d * light.color.component_mul(&object.color()) * Real::max(L.dot(&N), 0.);
+        let specular_highligh_color =
+        sum += diffuse_color;
+    }
+    sum
 }
 
 fn main() {

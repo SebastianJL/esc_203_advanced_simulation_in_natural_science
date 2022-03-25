@@ -169,7 +169,8 @@ fn render() {
         Box::new(Sphere::new(vector![1., 0., 0.], vector![0.0, 0.0, 10.0], 5.)),
         Box::new(Sphere::new(vector![0., 1., 0.], vector![0.5, 1.1, 3.5], 0.4)),
         Box::new(Sphere::new(vector![0., 1., 0.7], vector![-0.5, 0.4, 4.5], 0.4)),
-        Box::new(Sphere::new(vector![0., 1., 1.], vector![0.7, 0.7, 2.5], 0.1)),
+        Box::new(Sphere::new(vector![0., 1., 1.], vector![1.2, 1.8, 2.0], 0.1)),
+        Box::new(Sphere::new(vector![0.2, 0.2, 0.2], vector![2.5, 0.2, 2.5], 0.2)),
     ];
 
     let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::from_fn(

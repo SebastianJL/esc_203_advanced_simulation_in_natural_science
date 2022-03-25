@@ -149,6 +149,7 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     let ambient_light = vector![0.3,0.3,0.3];  // Todo: Remove hard coding of ambient lighting.
     let ambient_color = k_a * object.color().component_mul(&ambient_light);
     sum += ambient_color;
+
     sum
 }
 

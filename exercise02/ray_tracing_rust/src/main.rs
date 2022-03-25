@@ -59,8 +59,8 @@ impl Sphere {
                 a: 1.,
                 d: 1.,
                 s: 1.,
-                sp: 100.,
-                sm: 0.,
+                sp: 40.,
+                sm: 0.2,
             },
             center,
             radius,
@@ -164,7 +164,7 @@ fn render() {
     ];
     let scene_objects: Vec<Box<dyn SceneObject>> = vec![
         Box::new(Sphere::new(vector![1., 0., 0.], vector![0.0, 0.0, 10.0], 5.)),
-        Box::new(Sphere::new(vector![0., 1., 0.], vector![0.5, 0.4, 3.5], 0.4)),
+        Box::new(Sphere::new(vector![0., 1., 0.], vector![0.5, 1.1, 3.5], 0.4)),
         Box::new(Sphere::new(vector![0., 1., 0.7], vector![-0.5, 0.4, 4.5], 0.4)),
         Box::new(Sphere::new(vector![0., 1., 1.], vector![0.7, 0.7, 2.5], 0.1)),
     ];

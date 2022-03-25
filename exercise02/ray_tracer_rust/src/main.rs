@@ -160,6 +160,7 @@ fn render() {
     let height = multiplier * 400;
     let ratio = width as Real / height as Real;
 
+    let bg_color = [170; 3];
     let camera_pos = vector![0. as Real, 0., -1.];
     let lights = vec![
         Light { position: vector![4., 4., -3.], color: vector![1., 1., 1.] }
@@ -171,7 +172,9 @@ fn render() {
         Box::new(Sphere::new(vector![0., 1., 1.], vector![0.7, 0.7, 2.5], 0.1)),
     ];
 
-    let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::new(width, height);
+    let mut pixels: ImageBuffer<image::Rgb<u8>, _> = ImageBuffer::from_fn(
+        width, height, |_, _| image::Rgb(bg_color),
+    );
 
     for (i, x) in linspace::<Real>(-1., 1., width as usize).enumerate() {
         for (j, y) in linspace::<Real>(-1. / ratio, 1. / ratio, height as usize).enumerate() {

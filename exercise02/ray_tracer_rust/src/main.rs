@@ -124,6 +124,7 @@ fn find_closest_intersecting_object<'a>(
 
 fn phong_shading(light_rays: &Vec<Ray>, lights: Vec<&Light>, normal: Vector3<Real>, view_direction:
 Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
+    #![allow(non_snake_case)]
     // Source for mathematical model are the lecture notes for phong shading.
     let V = view_direction;
     let N = normal;

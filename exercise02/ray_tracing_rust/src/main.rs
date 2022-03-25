@@ -134,14 +134,21 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
         let L = light_ray.direction;
         let R = 2. * L.dot(&N) * N - L;
 
-        let ambient_light = vector![0.2,0.2,0.2];
-        let ambient_color = k_a * object.color().component_mul(&ambient_light);
+        // Diffuse reflection.
         let diffuse_color = k_d * light.color.component_mul(&object.color()) * Real::max(L.dot(&N), 0.);
+        sum += diffuse_color;
+
+        // Specular reflection.
         let specular_highlight_color: Vector3<Real> = k_sm * object.color() + (1. - k_sm) * vector![1., 1.,1.];
         let specular_color = k_s * specular_highlight_color.component_mul(&light.color) *
             Real::max(R.dot(&V), 0.).powf(k_sp);
-        sum += ambient_color + diffuse_color + specular_color;
+        sum += specular_color;
     }
+
+    // Ambient light.
+    let ambient_light = vector![0.3,0.3,0.3];  // Todo: Remove hard coding of ambient lighting.
+    let ambient_color = k_a * object.color().component_mul(&ambient_light);
+    sum += ambient_color;
     sum
 }
 
@@ -179,9 +186,11 @@ fn render() {
             let intersection = primary_ray.direction * t_min + camera_pos;
             let surface_normal = nearest_object.normal(intersection);
 
+            // Find light sources which are not shadowed by an object.
             let mut light_rays: Vec<Ray> = vec![];
             let mut active_lights: Vec<&Light> = vec![];
             for light in lights.iter() {
+                // Move out intersection slightly to avoid self intersection problem.
                 let light_ray_origin = intersection + 1e-5 * surface_normal;
                 let light_ray = Ray::new(
                     light_ray_origin,
@@ -197,10 +206,6 @@ fn render() {
                     light_rays.push(light_ray);
                     active_lights.push(light);
                 }
-            }
-
-            if light_rays.is_empty() {
-                continue;
             }
 
             let color: Vector3<Real> = phong_shading(

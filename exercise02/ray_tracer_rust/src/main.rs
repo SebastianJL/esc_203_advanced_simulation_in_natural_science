@@ -159,7 +159,7 @@ fn render() {
     let height = multiplier * 400;
     let ratio = width as Real / height as Real;
 
-    let camera_pos = vector![0_f64, 0., -1.];
+    let camera_pos = vector![0. as Real, 0., -1.];
     let lights = vec![
         Light { position: vector![4., 4., -3.], color: vector![1., 1., 1.] }
     ];

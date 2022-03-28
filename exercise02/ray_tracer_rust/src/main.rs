@@ -189,7 +189,7 @@ fn render() {
             }
             let nearest_object = nearest_object.unwrap();
 
-            let intersection = primary_ray.direction * t_min + camera_pos;
+            let intersection = primary_ray.direction * t_min + primary_ray.origin;
             let surface_normal = nearest_object.normal(intersection);
 
             // Find light sources which are not shadowed by an object.

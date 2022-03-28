@@ -154,11 +154,61 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     sum
 }
 
+fn trace(lights: &Vec<Light>, scene_objects: &Vec<Box<dyn SceneObject>>, ray: &Ray, max_recursion: u8) -> Option<Vector3<Real>> {
+    let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &ray);
+    if nearest_object.is_none() {
+        return None;
+    }
+    let nearest_object = nearest_object.unwrap();
+
+    let intersection = ray.direction * t_min + ray.origin;
+    let surface_normal = nearest_object.normal(intersection);
+
+    // Find light sources which are not shadowed by an object.
+    let mut light_rays: Vec<Ray> = vec![];
+    let mut active_lights: Vec<&Light> = vec![];
+    for light in lights.iter() {
+        // Move out intersection slightly to avoid self intersection problem.
+        let light_ray_origin = intersection + 1e-5 * surface_normal;
+        let light_ray = Ray::new(
+            light_ray_origin,
+            (light.position - light_ray_origin).normalize(),
+        );
+
+        let (_shadowing_object, t_min) = find_closest_intersecting_object(
+            &scene_objects,
+            &light_ray,
+        );
+        let is_shadowed = t_min < (light.position - intersection).norm();
+        if !is_shadowed {
+            light_rays.push(light_ray);
+            active_lights.push(light);
+        }
+    }
+
+    let phong_color: Vector3<Real> = phong_shading(
+        &light_rays,
+        active_lights,
+        surface_normal,
+        -ray.direction,
+        nearest_object);
+
+    // Todo: Trace reflected ray.
+
+    // Todo: Trace refracted ray.
+
+    // Todo: Mix colors
+    let mixed_color = phong_color;
+
+    Some(mixed_color)
+}
+
 fn render() {
     let multiplier = 4;
     let width = multiplier * 600;
     let height = multiplier * 400;
     let ratio = width as Real / height as Real;
+    let max_recursion = 1;
 
     let bg_color = [170; 3];
     let camera_pos = vector![0. as Real, 0., -1.];
@@ -183,43 +233,10 @@ fn render() {
             let direction = (pixel_pos - camera_pos).normalize();
             let primary_ray = Ray::new(camera_pos, direction);
 
-            let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &primary_ray);
-            if nearest_object.is_none() {
-                continue;
-            }
-            let nearest_object = nearest_object.unwrap();
-
-            let intersection = primary_ray.direction * t_min + primary_ray.origin;
-            let surface_normal = nearest_object.normal(intersection);
-
-            // Find light sources which are not shadowed by an object.
-            let mut light_rays: Vec<Ray> = vec![];
-            let mut active_lights: Vec<&Light> = vec![];
-            for light in lights.iter() {
-                // Move out intersection slightly to avoid self intersection problem.
-                let light_ray_origin = intersection + 1e-5 * surface_normal;
-                let light_ray = Ray::new(
-                    light_ray_origin,
-                    (light.position - light_ray_origin).normalize(),
-                );
-
-                let (_shadowing_object, t_min) = find_closest_intersecting_object(
-                    &scene_objects,
-                    &light_ray,
-                );
-                let is_shadowed = t_min < (light.position - intersection).norm();
-                if !is_shadowed {
-                    light_rays.push(light_ray);
-                    active_lights.push(light);
-                }
-            }
-
-            let color: Vector3<Real> = phong_shading(
-                &light_rays,
-                active_lights,
-                surface_normal,
-                -primary_ray.direction,
-                nearest_object);
+            let color = match trace(&lights, &scene_objects, &primary_ray, max_recursion) {
+                Some(color) => color,
+                None => continue,
+            };
 
             let rgb_value: [u8; 3] = (color * 255.)
                 .iter()

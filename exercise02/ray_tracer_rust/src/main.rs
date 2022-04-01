@@ -105,7 +105,7 @@ struct Light {
 }
 
 fn find_closest_intersecting_object<'a>(
-    objects: &'a Vec<Box<dyn SceneObject>>, ray: &Ray)
+    objects: &'a [Box<dyn SceneObject>], ray: &Ray)
     -> (Option<&'a Box<dyn SceneObject>>, Real) {
     let mut t_min = Real::INFINITY;
     let mut closest_object = None;
@@ -122,7 +122,7 @@ fn find_closest_intersecting_object<'a>(
     (closest_object, t_min)
 }
 
-fn phong_shading(light_rays: &Vec<Ray>, lights: Vec<&Light>, normal: Vector3<Real>, view_direction:
+fn phong_shading(light_rays: &[Ray], lights: &[&Light], normal: Vector3<Real>, view_direction:
 Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     #![allow(non_snake_case)]
     // Source for mathematical model are the lecture notes for phong shading.
@@ -154,7 +154,7 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     sum
 }
 
-fn trace(lights: &Vec<Light>, scene_objects: &Vec<Box<dyn SceneObject>>, ray: &Ray, max_recursion: u8) -> Option<Vector3<Real>> {
+fn trace(lights: &[Light], scene_objects: &[Box<dyn SceneObject>], ray: &Ray, max_recursion: u8) -> Option<Vector3<Real>> {
     let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &ray);
     if nearest_object.is_none() {
         return None;
@@ -188,7 +188,7 @@ fn trace(lights: &Vec<Light>, scene_objects: &Vec<Box<dyn SceneObject>>, ray: &R
 
     let phong_color: Vector3<Real> = phong_shading(
         &light_rays,
-        active_lights,
+        &active_lights,
         surface_normal,
         -ray.direction,
         nearest_object);

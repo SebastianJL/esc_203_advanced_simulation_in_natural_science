@@ -204,14 +204,14 @@ fn trace(lights: &Vec<Light>, scene_objects: &Vec<Box<dyn SceneObject>>, ray: &R
 }
 
 fn render() {
-    let multiplier = 4;
+    let multiplier = 1;
     let width = multiplier * 600;
     let height = multiplier * 400;
     let ratio = width as Real / height as Real;
+    let screen_size = 2.;
     let max_recursion = 1;
-
     let bg_color = [170; 3];
-    let camera_pos = vector![0. as Real, 0., -1.];
+    let camera_pos = vector![0. as Real, 0., -4.];
     let lights = vec![
         Light { position: vector![4., 4., -3.], color: vector![1., 1., 1.] }
     ];
@@ -227,8 +227,9 @@ fn render() {
         width, height, |_, _| image::Rgb(bg_color),
     );
 
-    for (i, x) in linspace::<Real>(-1., 1., width as usize).enumerate() {
-        for (j, y) in linspace::<Real>(-1. / ratio, 1. / ratio, height as usize).enumerate() {
+    for (i, x) in linspace::<Real>(-screen_size, screen_size, width as usize).enumerate() {
+        for (j, y) in linspace::<Real>(-screen_size / ratio, screen_size / ratio, height as
+            usize).enumerate() {
             let pixel_pos = vector![x, y, 0.];
             let direction = (pixel_pos - camera_pos).normalize();
             let primary_ray = Ray::new(camera_pos, direction);

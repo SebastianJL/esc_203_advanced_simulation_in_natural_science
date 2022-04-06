@@ -154,25 +154,26 @@ Vector3<Real>, object: &Box<dyn SceneObject>) -> Vector3<Real> {
     sum
 }
 
-fn trace(lights: &[Light], scene_objects: &[Box<dyn SceneObject>], ray: &Ray, max_recursion: u8) -> Option<Vector3<Real>> {
-    let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &ray);
+fn trace(lights: &[Light], scene_objects: &[Box<dyn SceneObject>], incident_ray: &Ray, mut n_bounces: u8) -> Option<Vector3<Real>> {
+    let (nearest_object, t_min) = find_closest_intersecting_object(&scene_objects, &incident_ray);
     if nearest_object.is_none() {
         return None;
     }
     let nearest_object = nearest_object.unwrap();
 
-    let intersection = ray.direction * t_min + ray.origin;
+    let intersection = incident_ray.direction * t_min + incident_ray.origin;
     let surface_normal = nearest_object.normal(intersection);
 
     // Find light sources which are not shadowed by an object.
     let mut light_rays: Vec<Ray> = vec![];
     let mut active_lights: Vec<&Light> = vec![];
+
+    // Move out intersection slightly outwards to avoid self intersection problem.
+    let outer_intersection = intersection + 1e-5 * surface_normal;
     for light in lights.iter() {
-        // Move out intersection slightly to avoid self intersection problem.
-        let light_ray_origin = intersection + 1e-5 * surface_normal;
         let light_ray = Ray::new(
-            light_ray_origin,
-            (light.position - light_ray_origin).normalize(),
+            outer_intersection,
+            (light.position - outer_intersection).normalize(),
         );
 
         let (_shadowing_object, t_min) = find_closest_intersecting_object(
@@ -190,26 +191,35 @@ fn trace(lights: &[Light], scene_objects: &[Box<dyn SceneObject>], ray: &Ray, ma
         &light_rays,
         &active_lights,
         surface_normal,
-        -ray.direction,
+        -incident_ray.direction,
         nearest_object);
 
-    // Todo: Trace reflected ray.
+    if n_bounces == 0 {
+        return Some(phong_color);
+    }
+    n_bounces -= 1;
+
+    // Trace reflected ray.
+    let i = incident_ray.direction;
+    let reflected_direction = i - 2. * (i.dot(&surface_normal)) * surface_normal;
+    let reflected_ray = Ray::new(outer_intersection, reflected_direction);
+    let reflected_color = trace(lights, scene_objects, &reflected_ray, n_bounces);
+
 
     // Todo: Trace refracted ray.
 
-    // Todo: Mix colors
-    let mixed_color = phong_color;
+    let mixed_color = phong_color + 0.3*reflected_color.unwrap_or_default();
 
     Some(mixed_color)
 }
 
 fn render() {
-    let multiplier = 1;
+    let multiplier = 7;
     let width = multiplier * 600;
     let height = multiplier * 400;
     let ratio = width as Real / height as Real;
     let screen_size = 2.;
-    let max_recursion = 1;
+    let n_bounces = 1;
     let bg_color = [170; 3];
     let camera_pos = vector![0. as Real, 0., -4.];
     let lights = vec![
@@ -234,7 +244,7 @@ fn render() {
             let direction = (pixel_pos - camera_pos).normalize();
             let primary_ray = Ray::new(camera_pos, direction);
 
-            let color = match trace(&lights, &scene_objects, &primary_ray, max_recursion) {
+            let color = match trace(&lights, &scene_objects, &primary_ray, n_bounces) {
                 Some(color) => color,
                 None => continue,
             };

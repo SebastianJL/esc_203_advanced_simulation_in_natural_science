@@ -72,4 +72,4 @@ if __name__ == '__main__':
     plt.contourf(u, levels=levels)
     plt.colorbar()
     plt.title(f'{iter_count = }, {w = }')
-    plt.savefig('laplace.png')
+    plt.savefig('laplace_sor.png')

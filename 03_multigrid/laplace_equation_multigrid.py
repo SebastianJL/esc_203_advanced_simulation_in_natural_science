@@ -19,41 +19,47 @@ from scipy import ndimage
 
 
 def main():
-    max_restrictions = 7
-    n_restrictions = 4
-    dx = 1
+    max_restrictions = 9
+    n_restrictions = 3
     assert n_restrictions <= max_restrictions
     # Needs to be 2^n + 1.
     n_grid = 2**max_restrictions + 1
+    dx = 1/n_grid
+    print(f'{n_grid}')
 
     # Voltage grid.
     voltage_grid = np.zeros((n_grid, n_grid))
-    high_voltage_index = (n_grid//2 + 1, slice(10, -10))
     high_voltage_mask = np.zeros_like(voltage_grid, dtype=bool)
-    high_voltage_mask[high_voltage_index] = True
+    high_voltage_mask[n_grid//2, 10:-10] = True
     voltage_grid[high_voltage_mask] = 1000
 
     # Pre smoothing. SOR replaces voltage_grid in place.
-    iter_count = sor(voltage_grid, dx, high_voltage_mask, w=1, max_iterations=10)
+    iter_count = jacobi(voltage_grid, dx, 0, high_voltage_mask, max_iterations=10)
 
-    defect = calculate_defect(voltage_grid, rho=0, boundary_mask=high_voltage_mask)
+    residual = calculate_residual(voltage_grid, dx, rho=0, boundary_mask=high_voltage_mask)
 
     # Restriction.
+    high_voltage_masks = [high_voltage_mask]
     for _ in range(n_restrictions):
-        defect, high_voltage_mask = restrict(defect, high_voltage_mask)
-        defect[high_voltage_mask] = 0
+        residual, high_voltage_mask = restrict(residual, high_voltage_mask)
+        residual[high_voltage_mask] = 0
+        high_voltage_masks.append(high_voltage_mask)
+        dx *= 2
 
-    # Solve problem on coarse grid.
-    correction = np.zeros_like(defect)
-    high_voltage_mask = np.zeros_like(defect, dtype=bool)
-
-    iter_count = sor(correction, dx, high_voltage_mask, w=1, rho=defect, max_iterations=1000)
+    # Solve residual equation on coarse grid.
+    error = np.zeros_like(residual)
+    v_cycle_iterations = jacobi(error, dx, rho=residual, boundary_mask=high_voltage_mask, max_iterations=1000)
+    print(f'{v_cycle_iterations = }')
 
     # Prolongation.
-    for _ in range(n_restrictions):
-        correction = prolongate(correction)
+    for i in range(2, n_restrictions + 2):
+        error = prolongate(error)
+        dx /= 2
+        error[high_voltage_masks[-i]] = 0
 
-    voltage_grid += correction
+    voltage_grid += error
+
+    iter_count = jacobi(voltage_grid, dx, rho=0, boundary_mask=high_voltage_masks[0], max_iterations=1000)
 
     # print(f'{w = }')
     # print(f'{t.elapse = }s')
@@ -67,8 +73,8 @@ def main():
     plt.savefig('laplace_multigrid.png')
 
 
-def calculate_defect(grid, rho, boundary_mask):
-    """Calculate the defect of the voltage grid for the laplace equation.
+def calculate_residual(grid, dx, rho, boundary_mask):
+    """Calculate the defect of the grid for the laplace equation.
 
     Laplace: L_continuous*phi_exact = rho_continuous
     Defect := rho_discrete - L_discrete*phi_estimate
@@ -77,61 +83,55 @@ def calculate_defect(grid, rho, boundary_mask):
 
     poisson_kernel = np.array([
         [0, 1, 0],
-        [1, 0, 1],
+        [1, -4, 1],
         [0, 1, 0],
     ])
 
-    defect = rho - ndimage.correlate(grid, poisson_kernel, mode='constant', cval=0)
+    residual = rho - 1/dx**2*ndimage.convolve(grid, poisson_kernel, mode='constant', cval=0)
     # Set defect at boundary to zero, because there is no defect at the boundary.
-    defect[boundary_mask] = 0
+    residual[boundary_mask] = 0
 
-    return defect
+    return residual
 
 
-def sor(grid, dx, high_voltage_mask, w=1, rho=0, max_iterations=1000) -> int:
-    """Successive over-relaxation solver.
+def jacobi(grid, dx, rho, boundary_mask, max_iterations=1000) -> int:
+    """Iterative Jacobi solver.
+
+    Solves the discrete Poisson equation:
+    L * grid = rho
+    where L = grad^2.
 
     Grid is changed inplace.
 
-    For w=1 this corresponds to Gauss-Seidel.
-    Returns the number of iterations.
+    :param grid: 2D array.
+    :param dx: Grid spacing.
+    :param rho: 2D array with same dimensions as grid.
+    :param boundary_mask: grid[boundary_mask] will stay untouched.
+    :param max_iterations: Maximum number of iterations.
+    :return: The number of iterations.
     """
 
-    # Stencil for 2D laplace finite differences method.
-    kernel = np.array([
+    poisson_kernel = np.array([
         [0, 1, 0],
         [1, -4, 1],
         [0, 1, 0],
     ])
 
-    residual = np.full_like(grid, np.inf)
+    # Jacobi iteration matrix.
+    correction = np.full_like(grid, np.inf)
 
-    omega = np.full_like(residual, w/4)
-    # We set the omega to 0 where the boundary conditions apply. I.e. no update there. Boundary condition at outer
-    # border of grid are ensured by correlation mode = 'constant'.
-    omega[high_voltage_mask] = 0
-
-    # Construct checkerboard pattern.
-    white_tiles = np.ones_like(grid, dtype=bool)
-    white_tiles[::2, ::2] = False
-    white_tiles[1::2, 1::2] = False
-    black_tiles = ~white_tiles
     iter_count = 0
-
-    while residual.max() > 1.0 and iter_count < max_iterations:
-        ndimage.correlate(grid, kernel, output=residual, mode='constant', cval=0)
-        grid[black_tiles] += (omega*(residual - dx**2*rho))[black_tiles]
-
-        ndimage.correlate(grid, kernel, output=residual, mode='constant', cval=0)
-        grid[white_tiles] += (omega*(residual - dx**2*rho))[white_tiles]
+    while abs(correction.max()) > 1 and iter_count < max_iterations:
+        ndimage.correlate(grid, poisson_kernel, output=correction, mode='constant', cval=0)
+        correction -= dx**2*rho
+        grid[~boundary_mask] += (1/4*correction)[~boundary_mask]
         iter_count += 1
 
     return iter_count
 
 
 def restrict(grid, boundary_mask):
-
-    kernel = 1/4 * np.array([
+    kernel = 1/4*np.array([
         [1/4, 1/2, 1/4],
         [1/2, 1/1, 1/2],
         [1/4, 1/2, 1/4],
@@ -139,13 +139,12 @@ def restrict(grid, boundary_mask):
 
     restricted_grid = ndimage.correlate(grid, kernel, mode='constant', cval=0)
     coarse_grid = restricted_grid[::2, ::2]
-    caorse_boundary_mask = boundary_mask[::2, ::2]
+    coarse_boundary_mask = boundary_mask[::2, ::2]
 
-    return coarse_grid, caorse_boundary_mask
+    return coarse_grid, coarse_boundary_mask
 
 
 def prolongate(grid):
-
     kernel = np.array([
         [1/4, 1/2, 1/4],
         [1/2, 1/1, 1/2],

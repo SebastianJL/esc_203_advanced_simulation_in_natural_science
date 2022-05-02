@@ -14,11 +14,13 @@ from timer import timer
 
 if __name__ == '__main__':
 
-    n_grid = 100
+    n_grid = 513
 
     # Voltage grid.
     u = np.zeros((n_grid, n_grid))
-    high_voltage_mask = (n_grid//2, slice(10, -10))
+    # high_voltage_mask = (n_grid//2, slice(10, -10))
+    high_voltage_mask = np.zeros_like(u, dtype=bool)
+    high_voltage_mask[n_grid//2, 10:-10] = True
     u[high_voltage_mask] = 1000
 
     # Residual grid.
